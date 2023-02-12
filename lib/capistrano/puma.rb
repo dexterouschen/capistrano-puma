@@ -165,3 +165,4 @@ module Capistrano
 end
 
 require 'capistrano/puma/systemd'
+require 'capistrano/puma/nginx'
