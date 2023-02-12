@@ -103,6 +103,10 @@ module Capistrano
   class Puma < Capistrano::Plugin
     include PumaCommon
 
+    def define_tasks
+      eval_rakefile File.expand_path('../tasks/puma.rake', __FILE__)
+    end
+
     def set_defaults
       set_if_empty :puma_role, :web
       set_if_empty :puma_env, -> { fetch(:rack_env, fetch(:rails_env, fetch(:stage))) }
