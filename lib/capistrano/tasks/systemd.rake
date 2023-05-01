@@ -26,13 +26,13 @@ namespace :puma do
 
       # Reload systemd
       git_plugin.execute_systemd("daemon-reload")
-      invoke "puma:enable"
+      invoke! "puma:enable"
     end
   end
 
   desc 'Uninstall Puma systemd service'
   task :uninstall do
-    invoke 'puma:disable'
+    invoke! 'puma:disable'
     on roles(fetch(:puma_role)) do |role|
       systemd_path = fetch(:puma_systemd_conf_dir, git_plugin.fetch_systemd_unit_path)
       if fetch(:puma_systemctl_user) == :system
