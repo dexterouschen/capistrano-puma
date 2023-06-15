@@ -21,9 +21,9 @@ server {
 <% if fetch(:nginx_use_ssl) -%>
 
 <% if fetch(:nginx_use_http2) -%>
-listen 443 ssl http2;
+  listen 443 ssl http2;
 <% else -%>
-listen 443 ssl;
+  listen 443 ssl;
 <% end -%>
 <% if fetch(:nginx_ssl_certificate) -%>
   ssl_certificate <%= fetch(:nginx_ssl_certificate) %>;
@@ -60,7 +60,7 @@ listen 443 ssl;
 
   location @puma_<%= fetch(:nginx_config_name) %> {
 <% if fetch(:nginx_ssl_verify_client) == 'optional' -%>
-  if ($ssl_client_verify != "SUCCESS") { set $ssl_client_certificate_validation "0"; }
+    if ($ssl_client_verify != "SUCCESS") { set $ssl_client_certificate_validation "0"; }
   <% fetch(:nginx_ssl_client_verification_conditions).each_with_index do |cond, i| -%>
   if (<%= cond %>) { set $ssl_client_certificate_validation "${ssl_client_certificate_validation}<%= i %>"; }
   <% end -%>
