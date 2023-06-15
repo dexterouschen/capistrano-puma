@@ -34,6 +34,15 @@ server {
 <% else -%>
   ssl_certificate_key /etc/ssl/private/<%= fetch(:nginx_config_name) %>.key;
 <% end -%>
+<% if fetch(:nginx_ssl_trusted_certificate) -%>
+  ssl_trusted_certificate <%= fetch(:nginx_ssl_trusted_certificate) %>;
+<% end -%>
+<% if fetch(:nginx_ssl_client_certificate) -%>
+  ssl_client_certificate <%= fetch(:nginx_ssl_client_certificate) %>;
+<% end -%>
+<% if fetch(:nginx_ssl_verify_client) -%>
+  ssl_verify_client <%= fetch(:nginx_ssl_verify_client) %>;
+<% end -%>
 <% else -%>
   listen 80;
 <% end -%>
@@ -48,6 +57,14 @@ server {
   error_page 503 @503;
 
   location @puma_<%= fetch(:nginx_config_name) %> {
+<% if fetch(:nginx_ssl_verify_client) == 'optional' -%>
+    if ($ssl_client_verify != "SUCCESS") { set $ssl_client_certificate_validation "0"; }
+    <% fetch(:nginx_ssl_client_verification_conditions).each_with_index do |cond, i| -%>
+    if (<%= cond %>) { set $ssl_client_certificate_validation "${ssl_client_certificate_validation}<%= i %>"; }
+    <% end -%>
+    if ($ssl_client_certificate_validation = "<%= (0..fetch(:nginx_ssl_client_verification_conditions).length).map(&:to_s).join %>") { return 403; }
+
+<% end -%>
     proxy_http_version 1.1;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
