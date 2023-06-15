@@ -62,7 +62,7 @@ server {
 <% if fetch(:nginx_ssl_verify_client) == 'optional' -%>
     if ($ssl_client_verify != "SUCCESS") { set $ssl_client_certificate_validation "0"; }
   <% fetch(:nginx_ssl_client_verification_conditions).each_with_index do |cond, i| -%>
-  if (<%= cond %>) { set $ssl_client_certificate_validation "${ssl_client_certificate_validation}<%= i %>"; }
+  if (<%= cond %>) { set $ssl_client_certificate_validation "<%= i %>${ssl_client_certificate_validation}"; }
   <% end -%>
   if ($ssl_client_certificate_validation = "<%= (0..fetch(:nginx_ssl_client_verification_conditions).length).map(&:to_s).join %>") { return 403; }
 
