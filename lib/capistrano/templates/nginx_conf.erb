@@ -51,7 +51,7 @@ server {
   server_name <%= fetch(:nginx_server_name) %>;
   root <%= current_path %>/public;
 
-<% nginx_location_specific_overrides = fetch(:nginx_location_specific_overrides) || [] -%>
+<% nginx_location_specific_overrides = fetch(:nginx_location_specific_overrides) || [['/', []]] -%>
 <% nginx_location_specific_overrides.each_with_index do |(location, overrides), i| -%>
   location <%= location %> {
     try_files $uri/index.html $uri @puma_<%= fetch(:nginx_config_name) %>-<%= i + 1 %>;
