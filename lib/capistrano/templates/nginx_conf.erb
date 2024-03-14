@@ -50,7 +50,9 @@ server {
 <% end -%>
   server_name <%= fetch(:nginx_server_name) %>;
   root <%= current_path %>/public;
-
+<% if fetch(:nginx_rewrite) -%>
+  <%= fetch(:nginx_rewrite) %>
+<% end -%>
 <% nginx_location_specific_overrides = fetch(:nginx_location_specific_overrides) || [['/', []]] -%>
 <% nginx_location_specific_overrides.each_with_index do |(location, overrides), i| -%>
   location <%= location %> {
