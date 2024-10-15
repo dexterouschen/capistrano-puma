@@ -1,9 +1,9 @@
 upstream puma_<%= fetch(:nginx_config_name) %> { <%
-  @backends = puma_binds.map do |bind|
+  @backends = puma_binds(backup: true).map do |bind|
      if bind.unix?
-       "server unix:#{bind.address} #{fetch(:nginx_socket_flags)};"
+       "server unix:#{bind.address} #{fetch(:nginx_socket_flags)} #{bind.backup? ? 'backup' : ''};"
      else
-       "server #{bind.local.address} #{fetch(:nginx_http_flags)};"
+       "server #{bind.local.address} #{fetch(:nginx_http_flags)} #{bind.backup? ? 'backup' : ''};"
      end
   end
 %><% @backends.each do |server| %>

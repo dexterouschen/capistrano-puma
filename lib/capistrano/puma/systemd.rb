@@ -13,6 +13,7 @@ module Capistrano
     def set_defaults
       set_if_empty :puma_systemctl_bin, -> { fetch(:systemctl_bin, '/bin/systemctl') }
       set_if_empty :puma_service_unit_name, -> { "#{fetch(:application)}_puma_#{fetch(:stage)}" }
+      set_if_empty :puma_backup_service_unit_name, -> { "#{fetch(:application)}_puma_#{fetch(:stage)}_backup" }
       set_if_empty :puma_enable_socket_service, false
 
       set_if_empty :puma_service_unit_env_files, -> { fetch(:service_unit_env_files, []) }

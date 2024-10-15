@@ -20,8 +20,22 @@ namespace :puma do
 
       upload_compiled_template.call("puma.service", "#{fetch(:puma_service_unit_name)}.service")
 
+      if fetch(:puma_backup_server)
+        conf = fetch(:puma_conf)
+        set :puma_conf, fetch(:puma_backup_conf)
+        upload_compiled_template.call("puma.service", "#{fetch(:puma_backup_service_unit_name)}.service")
+        set :puma_conf, conf
+      end
+
       if fetch(:puma_enable_socket_service)
         upload_compiled_template.call("puma.socket", "#{fetch(:puma_service_unit_name)}.socket")
+
+        if fetch(:puma_backup_server)
+          bind = fetch(:puma_bind)
+          set :puma_bind, fetch(:puma_backup_bind)
+          upload_compiled_template.call("puma.service", "#{fetch(:puma_backup_service_unit_name)}.service")
+          set :puma_bind, bind
+        end
       end
 
       # Reload systemd
@@ -37,8 +51,10 @@ namespace :puma do
       systemd_path = fetch(:puma_systemd_conf_dir, git_plugin.fetch_systemd_unit_path)
       if fetch(:puma_systemctl_user) == :system
         sudo "rm -f #{systemd_path}/#{fetch(:puma_service_unit_name)}*"
+        sudo "rm -f #{systemd_path}/#{fetch(:puma_backup_service_unit_name)}*"
       else
         execute :rm, "-f", "#{systemd_path}/#{fetch(:puma_service_unit_name)}*"
+        execute :rm, "-f", "#{systemd_path}/#{fetch(:puma_backup_service_unit_name)}*"
       end
       git_plugin.execute_systemd("daemon-reload")
     end
@@ -134,6 +150,71 @@ namespace :puma do
     on roles(fetch(:puma_role)) do
       git_plugin.execute_systemd("status", fetch(:puma_service_unit_name))
       git_plugin.execute_systemd("status", fetch(:puma_service_unit_name) + ".socket") if fetch(:puma_enable_socket_service)
+    end
+  end
+
+  namespace :backup do
+    desc 'Start Puma backup service via systemd'
+    task :start do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("start", fetch(:puma_backup_service_unit_name))
+      end
+    end
+
+    desc 'Stop Puma backup service via systemd'
+    task :stop do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("stop", fetch(:puma_backup_service_unit_name))
+      end
+    end
+
+    desc 'Stop Puma backup socket via systemd'
+    task :stop_socket do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("stop", fetch(:puma_backup_service_unit_name) + ".socket")
+      end
+    end
+
+    desc 'Restart Puma backup service via systemd'
+    task :restart do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("restart", fetch(:puma_backup_service_unit_name))
+      end
+    end
+
+    desc 'Restart Puma backup socket via systemd'
+    task :restart_socket do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("restart", fetch(:puma_backup_service_unit_name) + ".socket")
+      end
+    end
+
+    desc 'Reload Puma backup service via systemd'
+    task :reload do
+      on roles(fetch(:puma_role)) do
+        service_ok = if fetch(:puma_systemctl_user) == :system
+                      execute("#{fetch(:puma_systemctl_bin)} status #{fetch(:puma_backup_service_unit_name)} > /dev/null", raise_on_non_zero_exit: false)
+                    else
+                      execute("#{fetch(:puma_systemctl_bin)} --user status #{fetch(:puma_backup_service_unit_name)} > /dev/null", raise_on_non_zero_exit: false)
+                    end
+        cmd = 'reload'
+        unless service_ok
+          cmd = 'restart'
+        end
+        if fetch(:puma_systemctl_user) == :system
+          sudo "#{fetch(:puma_systemctl_bin)} #{cmd} #{fetch(:puma_backup_service_unit_name)}"
+        else
+          execute "#{fetch(:puma_systemctl_bin)}", "--user", cmd, fetch(:puma_backup_service_unit_name)
+        end
+      end
+    end
+
+    desc 'Get Puma backup service status via systemd'
+    task :status do
+      on roles(fetch(:puma_role)) do
+        git_plugin.execute_systemd("status", fetch(:puma_backup_service_unit_name))
+        git_plugin.execute_systemd("status", fetch(:puma_backup_service_unit_name) + ".socket") if fetch(:puma_enable_socket_service)
+      end
     end
   end
 end

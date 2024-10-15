@@ -60,7 +60,7 @@ module Capistrano
       backend.upload! compiled_template_puma(from, role), to
     end
 
-    PumaBind = Struct.new(:full_address, :kind, :address) do
+    PumaBind = Struct.new(:full_address, :kind, :address, :backup) do
       def unix?
         kind == :unix
       end
@@ -85,6 +85,10 @@ module Capistrano
         end
       end
 
+      def backup?
+        backup == true
+      end
+
       private
 
       def localize_address(address)
@@ -92,11 +96,17 @@ module Capistrano
       end
     end
 
-    def puma_binds
-      Array(fetch(:puma_bind)).map do |m|
-        etype, address  = /(tcp|unix|ssl):\/{1,2}(.+)/.match(m).captures
-        PumaBind.new(m, etype.to_sym, address)
-      end
+    def puma_binds(backup: false)
+      [
+        *Array(fetch(:puma_bind)).map do |m|
+          etype, address  = /(tcp|unix|ssl):\/{1,2}(.+)/.match(m).captures
+          PumaBind.new(m, etype.to_sym, address, false)
+        end,
+        *(backup ? Array(fetch(:puma_backup_bind)).map do |m|
+          etype, address  = /(tcp|unix|ssl):\/{1,2}(.+)/.match(m).captures
+          PumaBind.new(m, etype.to_sym, address, true)
+        end : nil)
+      ]
     end
   end
 
@@ -116,11 +126,15 @@ module Capistrano
       set_if_empty :puma_workers, 0
       set_if_empty :puma_rackup, -> { File.join(current_path, 'config.ru') }
       set_if_empty :puma_state, -> { File.join(shared_path, 'tmp', 'pids', 'puma.state') }
+      set_if_empty :puma_backup_state, -> { File.join(shared_path, 'tmp', 'pids', 'puma_backup.state') }
       set_if_empty :puma_pid, -> { File.join(shared_path, 'tmp', 'pids', 'puma.pid') }
+      set_if_empty :puma_backup_pid, -> { File.join(shared_path, 'tmp', 'pids', 'puma_backup.pid') }
       set_if_empty :puma_bind, -> { File.join("unix://#{shared_path}", 'tmp', 'sockets', 'puma.sock') }
+      set_if_empty :puma_backup_bind, -> { File.join("unix://#{shared_path}", 'tmp', 'sockets', 'puma_backup.sock') }
       set_if_empty :puma_control_app, false
       set_if_empty :puma_default_control_app, -> { File.join("unix://#{shared_path}", 'tmp', 'sockets', 'pumactl.sock') }
       set_if_empty :puma_conf, -> { File.join(shared_path, 'puma.rb') }
+      set_if_empty :puma_backup_conf, -> { File.join(shared_path, 'puma_backup.rb') }
       set_if_empty :puma_access_log, -> { File.join(shared_path, 'log', 'puma_access.log') }
       set_if_empty :puma_error_log, -> { File.join(shared_path, 'log', 'puma_error.log') }
       set_if_empty :puma_init_active_record, false
@@ -164,6 +178,26 @@ module Capistrano
 
     def upload_puma_rb(role)
       template_puma 'puma', fetch(:puma_conf), role
+
+      return unless fetch(:puma_backup_server)
+
+      # pidfile, state_path, bind, workers
+
+      pid = fetch(:puma_pid)
+      set :puma_pid, fetch(:puma_backup_pid)
+      state = fetch(:puma_state)
+      set :puma_state, fetch(:puma_backup_state)
+      bind = fetch(:puma_bind)
+      set :puma_bind, fetch(:puma_backup_bind)
+      workers = fetch(:puma_workers)
+      set :puma_workers, 2
+
+      template_puma 'puma', fetch(:puma_backup_conf), role
+
+      set :puma_pid, pid
+      set :puma_state, state
+      set :puma_bind, bind
+      set :puma_workers, workers
     end
   end
 end
