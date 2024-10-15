@@ -11,7 +11,7 @@ namespace :puma do
   task :check do
     on roles(fetch(:puma_role)) do |role|
       #Create puma.rb for new deployments
-      unless  test "[ -f #{fetch(:puma_conf)} ]"
+      unless test "[ -f #{fetch(:puma_conf)} ] #{fetch(:puma_backup_server) ? "&& [ -f #{fetch(:puma_backup_conf)} ]" : ''}"
         warn 'puma.rb NOT FOUND!'
         git_plugin.upload_puma_rb(role)
         info 'puma.rb generated'
