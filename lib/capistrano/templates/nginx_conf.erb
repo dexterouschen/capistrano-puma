@@ -90,7 +90,7 @@ server {
   <% end -%>
 <% end -%>
     proxy_pass http://puma_<%= fetch(:nginx_config_name) %>;
-  <% if fetch(:nginx_limit_req) %>
+  <% if fetch(:nginx_limit_req) && overrides.none? { |o| o =~ /limit_req/ } %>
     limit_req <%= fetch(:nginx_limit_req) %>;
   <% end %>
     access_log <%= shared_path %>/log/nginx.access.log;
